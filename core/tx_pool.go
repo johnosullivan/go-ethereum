@@ -393,9 +393,11 @@ func (pool *TxPool) loop() {
 					continue
 				}
 				// Any non-locals old enough should be removed
+				// TOOD Add Log for eviction
 				if time.Since(pool.beats[addr]) > pool.config.Lifetime {
 					list := pool.queue[addr].Flatten()
 					for _, tx := range list {
+						zlog.Print("Eviction Tx: ", tx)
 						pool.removeTx(tx.Hash(), true)
 					}
 					queuedEvictionMeter.Mark(int64(len(list)))
@@ -458,6 +460,7 @@ func (pool *TxPool) SetGasPrice(price *big.Int) {
 		// pool.priced is sorted by GasFeeCap, so we have to iterate through pool.all instead
 		drop := pool.all.RemotesBelowTip(price)
 		for _, tx := range drop {
+			zlog.Print("Dropped Tx (below minimum price required threshold): ", tx)
 			pool.removeTx(tx.Hash(), false)
 		}
 		pool.priced.Removed(len(drop))
@@ -1308,8 +1311,8 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	pool.currentMaxGas = newHead.GasLimit
 
 	// Inject any transactions discarded due to reorgs
-	log.Debug("Reinjecting stale transactions", "count", len(reinject))
-	zlog.Print("Reinjecting stale transactions ", " count ", len(reinject))
+	//log.Debug("Reinjecting stale transactions", "count", len(reinject))
+	//zlog.Print("Reinjecting stale transactions ", " count ", len(reinject))
 	senderCacher.recover(pool.signer, reinject)
 	pool.addTxsLocked(reinject, false)
 
